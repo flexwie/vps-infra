@@ -1,0 +1,122 @@
+---
+- hosts: all
+  name: Prepare system
+  become: true
+  tasks:
+    - name: Install aptitude
+      ansible.builtin.apt:
+        name:
+          - aptitude
+        state: present
+        update_cache: true
+    - name: Setup passwordless sudo
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        state: present
+        regexp: '^%sudo'
+        line: '%sudo ALL=(ALL) NOPASSWD: ALL'
+        validate: /usr/sbin/visudo -cf %s
+    - name: Create regular user
+      ansible.builtin.user:
+        name: felix
+        state: present
+        groups:
+          - sudo
+        append: true
+        create_home: true
+        shell: /bin/bash
+    - name: Add authorized SSH key for user
+      ansible.posix.authorized_key:
+        user: felix
+        state: present
+        key: "{{ lookup('file', lookup('env', 'HOME') + '/.ssh/id_rsa.pub') }}"
+    - name: Disable password authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        state: present
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin prohibit-password'
+    - name: Hush login
+      ansible.builtin.file:
+        path: /home/felix/.hushlogin
+        state: touch
+    - name: Install common system packages
+      ansible.builtin.apt:
+        name:
+          - curl
+          - neovim
+          - git
+          - ufw
+        state: present
+        update_cache: true
+    - name: Setup ufw for ssh
+      community.general.ufw:
+        rule: allow
+        name: OpenSSH
+    - name: Setup ufw for http
+      community.general.ufw:
+        rule: allow
+        port: 80
+    - name: Setup ufw for https
+      community.general.ufw:
+        rule: allow
+        port: 443
+    - name: Start ufw
+      community.general.ufw:
+        state: enabled
+        default: deny
+
+- hosts: all
+  name: Prepare env
+  remote_user: felix
+  vars:
+    home: "{{ ansible_env.HOME }}"
+
+  tasks:
+    - name: Check if starship is installed
+      ansible.builtin.shell:
+        cmd: which starship
+      register: starship_present
+      ignore_errors: true
+      changed_when: false
+    - name: Install starship
+      ansible.builtin.shell:
+        cmd: set -o pipefail && curl -sS https://starship.rs/install.sh | sh -s -- -y
+      when: starship_present is failed
+    - name: Enable starship
+      ansible.builtin.lineinfile:
+        path: /home/felix/.bashrc
+        regexp: '^starship'
+        line: eval "$(starship init bash)"
+    - name: Prepare sparse checkout
+      ansible.builtin.shell: |
+        git init
+        git config core.sparsecheckout true
+        git remote add origin git@github.com:flexwie/dotfiles.git
+      args:
+        chdir: "{{ home }}"
+        creates: "{{ home }}/.git"
+    - name: Configure folders to checkout
+      ansible.builtin.copy:
+        dest: "{{ home }}/.git/info/sparse-checkout"
+        content: ".config"
+        mode: '0666'
+    - name: Ensure github.com is a known host
+      ansible.builtin.lineinfile:
+        dest: /home/felix/.ssh/known_hosts
+        create: true
+        state: present
+        line: "{{ lookup('pipe', 'ssh-keyscan -t rsa github.com') }}"
+        regexp: "^github\\.com"
+        mode: '0666'
+    - name: Clone config
+      ansible.builtin.shell:
+        cmd: git pull origin main
+      args:
+        chdir: "{{ home }}"
+        creates: "{{ home }}/.config"
+    - name: Create alias for ls
+      ansible.builtin.lineinfile:
+        path: /home/felix/.bashrc
+        regexp: '^alias ls="ls -al"'
+        line: alias ls="ls -al"

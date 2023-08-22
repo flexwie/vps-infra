@@ -1,0 +1,47 @@
+{
+  "name": "Azure Ansible (Community)",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "runArgs": [
+    "--init"
+  ],
+  "mounts": [
+    // [Optional] Anisble Collections: Uncomment if you want to mount your local .ansible/collections folder.
+    // "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ansible/collections,target=/root/.ansible/collections,type=bind,consistency=cached",
+    "source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind",
+    "source=${localEnv:HOME}/.ssh/id_rsa,target=/home/vscode/.ssh/id_rsa,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.ssh/id_rsa.pub,target=/home/vscode/.ssh/id_rsa.pub,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.kube/config,target=/home/vscode/.kube/config,type=bind,consistency=cached"
+  ],
+  "containerEnv": {
+    "SSH_AUTH_SOCK": "/run/host-services/ssh-auth.sock",
+  },
+  "overrideCommand": false,
+  // Configure tool-specific properties.
+  "customizations": {
+    // Configure properties specific to VS Code.
+    "vscode": {
+      // Add the IDs of extensions you want installed when the container is created.
+      "extensions": [
+        "vscoss.vscode-ansible",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "redhat.ansible",
+        "1password.op-vscode"
+      ],
+      "settings": {
+        //"git.enableCommitSigning": true,
+        "editor.formatOnSave": true,
+        "files.autoSave": "onFocusChange"
+      }
+    }
+  },
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  // "forwardPorts": [],
+  // Use 'postCreateCommand' to run commands after the container is created.
+  // Set `remoteUser` to `root` to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+  "postCreateCommand": "ssh-add ~/.ssh/id_rsa",
+  "remoteUser": "vscode",
+  "features": {}
+}

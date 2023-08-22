@@ -1,0 +1,7 @@
+- name: install_bat
+  src: https://github.com/aeimer/ansible-install-bat.git
+  scm: git
+
+- name: starship
+  src: https://github.com/andrewrothstein/ansible-starship.git
+  scm: git
