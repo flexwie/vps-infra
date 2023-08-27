@@ -12,7 +12,8 @@
     "source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind",
     "source=${localEnv:HOME}/.ssh/id_rsa,target=/home/vscode/.ssh/id_rsa,type=bind,consistency=cached",
     "source=${localEnv:HOME}/.ssh/id_rsa.pub,target=/home/vscode/.ssh/id_rsa.pub,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/.kube/config,target=/home/vscode/.kube/config,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.kube/config,target=/home/vscode/.kube/config,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.czrc,target=/home/vscode/.czrc,type=bind,consistency=cached"
   ],
   "containerEnv": {
     "SSH_AUTH_SOCK": "/run/host-services/ssh-auth.sock",
@@ -43,5 +44,7 @@
   // Set `remoteUser` to `root` to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
   "postCreateCommand": "ssh-add ~/.ssh/id_rsa",
   "remoteUser": "vscode",
-  "features": {}
+  "features": {
+    "ghcr.io/flexwie/devcontainer-features/op:latest": {}
+  }
 }

@@ -26,15 +26,6 @@ RUN curl -sSfo op.zip \
     && unzip -od /usr/local/bin/ op.zip \
     && rm op.zip
 
-# Install nomad
-# RUN /tmp/library-scripts/nomad-debian.sh
-RUN sudo apt-get update && \
-    sudo apt-get install wget gpg coreutils -y && \
-    wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list && \
-    sudo apt-get update && \
-    sudo apt-get install nomad -y
-
 # [Option] Install Azure CLI
 ARG INSTALL_AZURE_CLI="false"
 # [Option] Install Docker CLI
@@ -54,7 +45,7 @@ RUN if [ "${INSTALL_AZURE_CLI}" = "true" ]; then bash /tmp/library-scripts/azcli
     && rm -rf /var/lib/apt/lists/*
 
 # Add Node packages
-RUN npm i -g commitizen
+RUN npm i -g commitizen cz-conventional-changelog
 
 ENTRYPOINT [ "/usr/local/share/docker-init.sh" ]
 CMD [ "sleep", "infinity" ]
