@@ -47,6 +47,7 @@
           - neovim
           - git
           - ufw
+          - python3-pip
         state: present
         update_cache: true
     - name: Setup ufw for ssh
@@ -71,23 +72,15 @@
   remote_user: felix
   vars:
     home: "{{ ansible_env.HOME }}"
-
+    install_starship: true
+    install_servicer: true
+    install_containerd: true
+    install_bat: true
   tasks:
-    - name: Check if starship is installed
-      ansible.builtin.shell:
-        cmd: which starship
-      register: starship_present
-      ignore_errors: true
-      changed_when: false
-    - name: Install starship
-      ansible.builtin.shell:
-        cmd: set -o pipefail && curl -sS https://starship.rs/install.sh | sh -s -- -y
-      when: starship_present is failed
-    - name: Enable starship
-      ansible.builtin.lineinfile:
-        path: /home/felix/.bashrc
-        regexp: '^starship'
-        line: eval "$(starship init bash)"
+    - name: Install needed pip dependencies
+      ansible.builtin.pip:
+        name:
+          - github3.py
     - name: Prepare sparse checkout
       ansible.builtin.shell: |
         git init
@@ -120,3 +113,69 @@
         path: /home/felix/.bashrc
         regexp: '^alias ls="ls -al"'
         line: alias ls="ls -al"
+    - name: Install starhip
+      when: install_starship
+      block:
+        - name: Check if starship is installed
+          ansible.builtin.shell:
+            cmd: which starship
+          register: starship_present
+          ignore_errors: true
+          changed_when: false
+        - name: Install starship
+          ansible.builtin.shell:
+            cmd: curl -sS https://starship.rs/install.sh | sh -s -- -y
+          when: starship_present is failed
+          args:
+            creates: /usr/local/bin/starship
+        - name: Enable starship
+          ansible.builtin.lineinfile:
+            path: /home/felix/.bashrc
+            regexp: '^starship'
+            line: eval "$(starship init bash)"
+    - name: Install servicer
+      when: install_servicer
+      block:
+        - name: Get latest release
+          community.general.github_release:
+            user: servicer-labs
+            repo: servicer
+            action: latest_release
+          register: servicer_latest
+        - name: Grab servicer latest binary
+          ansible.builtin.get_url:
+            url: "https://github.com/servicer-labs/servicer/releases/download/{{ servicer_latest['tag'] }}/servicer-x86_64-unknown-linux-gnu"
+            dest: /usr/bin/ser
+            mode: '0775'
+          become: true
+          when: ansible_architecture == "x86_64"
+        - name: Grab servicer latest binary
+          ansible.builtin.get_url:
+            url: "https://github.com/servicer-labs/servicer/releases/download/{{ servicer_latest['tag'] }}/servicer-aarch64-unknown-linux-gnu"
+            dest: /usr/bin/ser
+            mode: '0775'
+          become: true
+          when: ansible_architecture == "aarch64"
+        - name: Fail on unknown arch
+          ansible.builtin.fail:
+            msg: "Failed to fetch servicer for the current host architecture: ${{ ansible_architecture }}"
+          when: ansible_architecture != "x86_64" and ansible_architecture != "aarch64"
+    - name: Install bat
+      when: install_bat
+      block:
+        - name: Install bat
+          ansible.builtin.apt:
+            name:
+              - bat
+            state: present
+          become: true
+        - name: Add cat alias
+          ansible.builtin.lineinfile:
+            path: /home/felix/.bashrc
+            regexp: '^alias cat="batcat"'
+            line: alias cat="batcat"
+    - name: Install containerd
+      when: install_containerd
+      become: true
+      ansible.builtin.import_role:
+        name: containerd

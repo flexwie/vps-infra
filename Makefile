@@ -1,7 +1,7 @@
-.PHONY: run
+.PHONY: config-run
 
-deps:
-	ansible-galaxy install -r requirements.yml
+config-deps:
+	ansible-galaxy install -r config/requirements.yml
 
-run: deps
-	ansible-playbook playbook.yml -u root --private-key ~/.ssh/id_rsa -i hosts.ini
+config-run: config-deps
+	ansible-playbook config/playbook.yml -u root --private-key ~/.ssh/id_rsa -i config/hosts.ini

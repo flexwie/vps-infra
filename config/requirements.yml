@@ -1,0 +1,3 @@
+- name: containerd
+  src: https://github.com/geerlingguy/ansible-role-containerd.git
+  scm: git
